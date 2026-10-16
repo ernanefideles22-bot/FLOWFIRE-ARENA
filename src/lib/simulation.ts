@@ -19,3 +19,19 @@ export function simulateResult(matchId:string,scoreA:number,scoreB:number):SimRe
  if(typeof matchId!=='string'||!matchId.trim()||!Number.isInteger(scoreA)||!Number.isInteger(scoreB)||scoreA<0||scoreB<0||scoreA>100||scoreB>100)throw Error('Resultado inválido');
  return {matchId,winner:scoreA===scoreB?'draw':scoreA>scoreB?'A':'B',scoreA,scoreB,status:'finished'};
 }
+
+export type SimStanding={teamId:string;played:number;wins:number;draws:number;losses:number;points:number;scored:number;conceded:number;difference:number};
+export function simulateStandings(matches:SimMatch[],results:SimResult[]):SimStanding[]{
+ const table=new Map<string,SimStanding>();
+ const get=(id:string)=>{let x=table.get(id);if(!x){x={teamId:id,played:0,wins:0,draws:0,losses:0,points:0,scored:0,conceded:0,difference:0};table.set(id,x);}return x;};
+ const resultsByMatch=new Map(results.map(r=>[r.matchId,r]));
+ for(const m of matches){
+  const r=resultsByMatch.get(m.id);if(!r)continue;
+  const a=get(m.teamA),b=get(m.teamB);
+  a.played++;b.played++;a.scored+=r.scoreA;a.conceded+=r.scoreB;b.scored+=r.scoreB;b.conceded+=r.scoreA;
+  if(r.winner==='draw'){a.draws++;b.draws++;a.points++;b.points++;}
+  else if(r.winner==='A'){a.wins++;a.points+=3;b.losses++;}
+  else{b.wins++;b.points+=3;a.losses++;}
+ }
+ return [...table.values()].map(t=>({...t,difference:t.scored-t.conceded})).sort((a,b)=>b.points-a.points||b.difference-a.difference||b.scored-a.scored||a.teamId.localeCompare(b.teamId));
+}
