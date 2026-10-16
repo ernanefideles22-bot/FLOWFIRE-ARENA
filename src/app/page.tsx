@@ -12,18 +12,21 @@ export default function Home(){
  const [saving,setSaving]=useState(false);
  const [notice,setNotice]=useState('');
  const [savedId,setSavedId]=useState('');
- const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('')};
+ const [queueToken,setQueueToken]=useState('');
+ const [queueStatus,setQueueStatus]=useState('');
+ const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('');setQueueToken('');setQueueStatus('')};
  const register=async()=>{
   setSaving(true);setNotice('');
   try{
    const response=await fetch('/api/teams',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode,team:{name:team,captain,players}})});
    const data=await response.json();
    if(!response.ok)throw new Error(data.error||'Falha ao cadastrar');
-   setSavedId(data.teamId);
+   setSavedId(data.teamId);setQueueToken(data.queueToken);
    setNotice('Equipe cadastrada no banco de dados. O pareamento ainda não está disponível ao público.');
   }catch(error){setNotice(error instanceof Error?error.message:'Falha no cadastro');}
   finally{setSaving(false);}
  };
+ const joinQueue=async()=>{setSaving(true);setNotice('');try{const response=await fetch('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});const data=await response.json();if(!response.ok)throw Error(data.error||'Falha no pareamento');setQueueStatus(data.status==='ready'?'Confronto formado! Partida: '+data.matchId:'Aguardando adversário da mesma modalidade.');}catch(e){setNotice(e instanceof Error?e.message:'Falha no pareamento');}finally{setSaving(false)}};
  return <main style={{maxWidth:620,margin:'auto',padding:24,fontFamily:'Arial,sans-serif',color:'#f5f7ff'}}>
   <header style={{fontWeight:900,fontSize:28,letterSpacing:1}}>🔥 FLOWFIRE <span style={{color:'#ff682f'}}>ARENA</span></header>
   <h1 style={{marginTop:52,fontSize:36}}>Contra Squad</h1>
@@ -36,7 +39,7 @@ export default function Home(){
     <h2>Confirme os dados</h2>
     <p><b>Equipe:</b> {team}</p><p><b>Capitão:</b> {captain}</p><p><b>Modalidade:</b> {mode.replace('v','x')}</p>
     <ol>{players.map((p,i)=><li key={i}>{p}</li>)}</ol>
-    {savedId?<p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
+    {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila / Consultar confronto'}</button>{queueStatus&&<p role="status">{queueStatus}</p>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
     {notice&&<p role="status">{notice}</p>}
     <button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Voltar</button>
    </div>:<form onSubmit={e=>{e.preventDefault();if(new Set(players.map(p=>p.trim().toLowerCase())).size!==players.length){setNotice('Não repita jogadores');return;}setNotice('');setPreview(true);}}>
@@ -48,6 +51,6 @@ export default function Home(){
     <button type="submit" style={{width:'100%',padding:14,background:'#ef662f',color:'white',fontWeight:700,border:0,borderRadius:8,marginTop:22}}>Revisar cadastro</button>
    </form>}
   </section>
-  <p style={{color:'#9ba8bf',fontSize:12,marginTop:24}}>Ambiente de testes • Sem pagamentos • Sem criação de salas • Pareamento público indisponível</p>
+  <p style={{color:'#9ba8bf',fontSize:12,marginTop:24}}>Ambiente de testes • Sem pagamentos • Sem criação de salas • Pareamento experimental disponível após cadastro</p>
  </main>;
 }
