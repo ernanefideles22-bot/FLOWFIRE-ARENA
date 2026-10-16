@@ -14,7 +14,7 @@ export async function POST(req:NextRequest){
    await c.query('BEGIN');
    const m=await c.query('SELECT vortex_session_id,vortex_room_id,mode FROM arena_matches WHERE id=$1 FOR UPDATE',[body.matchId]);
    if(!m.rowCount||!m.rows[0].vortex_session_id||!m.rows[0].vortex_room_id){await c.query('ROLLBACK');return NextResponse.json({error:'Sala vinculada não encontrada'},{status:404});}
-   if(m.rows[0].mode!=='1v1'){await c.query('ROLLBACK');return NextResponse.json({error:'Teste disponível somente para 1x1'},{status:409});}
+   if(!['1v1','2v2'].includes(m.rows[0].mode)){await c.query('ROLLBACK');return NextResponse.json({error:'Teste disponível somente para 1x1 e 2x2'},{status:409});}
    session=m.rows[0].vortex_session_id;
    await c.query('CREATE TABLE IF NOT EXISTS arena_vortex_start_attempts(match_id uuid PRIMARY KEY REFERENCES arena_matches(id),requested_at timestamptz NOT NULL DEFAULT now(),state text NOT NULL)');
    const x=await c.query("INSERT INTO arena_vortex_start_attempts(match_id,state) VALUES($1,'uncertain') ON CONFLICT DO NOTHING RETURNING match_id",[body.matchId]);
