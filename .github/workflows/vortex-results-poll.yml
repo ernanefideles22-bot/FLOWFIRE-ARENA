@@ -1,0 +1,21 @@
+name: Consultar resultados Vortex
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Consultar partidas pendentes
+        env:
+          RESULT_POLL_KEY: ${{ secrets.RESULT_POLL_KEY }}
+        run: |
+          if [ -z "$RESULT_POLL_KEY" ]; then
+            echo "Configure RESULT_POLL_KEY nos secrets do GitHub."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            --header "Authorization: Bearer $RESULT_POLL_KEY" \
+            "https://flowfire-arena-web-production.up.railway.app/api/cron/results"
