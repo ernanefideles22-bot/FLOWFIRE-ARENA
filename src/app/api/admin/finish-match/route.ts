@@ -1,0 +1,11 @@
+import {NextRequest,NextResponse} from 'next/server';
+import {timingSafeEqual} from 'node:crypto';
+import {db,ensureSchema} from '../../../../lib/db';
+export const runtime='nodejs';
+function authorized(req:NextRequest){const k=process.env.ADMIN_API_KEY,s=req.headers.get('x-admin-key');if(!k||!s)return false;const a=Buffer.from(k),b=Buffer.from(s);return a.length===b.length&&timingSafeEqual(a,b);}
+export async function POST(req:NextRequest){
+ if(!authorized(req))return NextResponse.json({error:'Não autorizado'},{status:401});
+ let body:{matchId?:string;winner?:'team_a'|'team_b';scoreA?:number;scoreB?:number;confirm?:string};try{body=await req.json();}catch{return NextResponse.json({error:'JSON inválido'},{status:400});}
+ if(typeof body.matchId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.matchId)||!['team_a','team_b'].includes(body.winner||'')||!Number.isInteger(body.scoreA)||!Number.isInteger(body.scoreB)||body.scoreA!<0||body.scoreB!<0||body.scoreA!>20||body.scoreB!>20||body.scoreA===body.scoreB||((body.scoreA!>body.scoreB!)!==(body.winner==='team_a'))||body.confirm!=='FINISH_VERIFIED_MATCH')return NextResponse.json({error:'Resultado inválido'},{status:400});
+ try{await ensureSchema();const c=await db().connect();try{await c.query('BEGIN');const m=await c.query('SELECT id,status,team_a,team_b,vortex_room_id FROM arena_matches WHERE id=$1 FOR UPDATE',[body.matchId]);if(!m.rowCount){await c.query('ROLLBACK');return NextResponse.json({error:'Partida não encontrada'},{status:404});}if(m.rows[0].status==='finished'){await c.query('ROLLBACK');return NextResponse.json({error:'Partida já finalizada'},{status:409});}if(!m.rows[0].vortex_room_id){await c.query('ROLLBACK');return NextResponse.json({error:'Sala Vortex não vinculada'},{status:409});}await c.query("UPDATE arena_matches SET status='finished',vortex_result=$2::jsonb WHERE id=$1",[body.matchId,JSON.stringify({source:'admin_verified_screenshot',winner:body.winner,scoreA:body.scoreA,scoreB:body.scoreB,verifiedAt:new Date().toISOString()})]);await c.query('COMMIT');return NextResponse.json({status:'finished',matchId:body.matchId,recorded:true});}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}catch{return NextResponse.json({error:'Não foi possível finalizar a partida'},{status:503});}
+}
