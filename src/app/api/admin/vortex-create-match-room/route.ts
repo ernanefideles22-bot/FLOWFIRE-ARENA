@@ -30,7 +30,7 @@ export async function POST(req:NextRequest){
    const base=process.env.VORTEX_BASE_URL||'https://vortex-ff.com/api';
    const res=await fetch(base+'/rooms',{method:'POST',headers:{Authorization:'Bearer '+process.env.VORTEX_TOKEN,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({password,start_delay_minutes:10,config_type:'ap_padrao',room_name:'FLOWFIRE ARENA '+(body.matchId?'CS':'CS'),map_name:'Bermuda'}),signal:controller.signal,cache:'no-store'});
    const raw=await res.text();let data:Record<string,unknown>={};try{data=JSON.parse(raw);}catch{}
-   if(!res.ok)return NextResponse.json({error:'Vortex recusou criação; reserva exige revisão manual',providerStatus:res.status,retryBlocked:true},{status:502});
+   if(!res.ok){console.error('Vortex room create rejected',{matchId:body.matchId,providerStatus:res.status,providerCode:typeof data.code==='string'?data.code:undefined});return NextResponse.json({error:'Vortex recusou criação; reserva exige revisão manual',providerStatus:res.status,providerCode:typeof data.code==='string'?data.code:undefined,retryBlocked:true},{status:502});}
    const session=typeof data.session_id==='string'?data.session_id:null;const room=typeof data.room_id==='number'||typeof data.room_id==='string'?String(data.room_id):null;
    if(!session||!room)return NextResponse.json({error:'Resposta Vortex incompleta; verificar painel do provedor antes de qualquer nova tentativa',retryBlocked:true},{status:502});
    const pass=typeof data.password==='string'?data.password:password;
