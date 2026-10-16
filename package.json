@@ -12,12 +12,14 @@
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0"
+    "@types/react-dom": "^19.0.0",
+    "@types/pg": "^8.15.5"
   }
 }
