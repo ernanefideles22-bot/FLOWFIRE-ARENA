@@ -35,3 +35,10 @@ export function simulateStandings(matches:SimMatch[],results:SimResult[]):SimSta
  }
  return [...table.values()].map(t=>({...t,difference:t.scored-t.conceded})).sort((a,b)=>b.points-a.points||b.difference-a.difference||b.scored-a.scored||a.teamId.localeCompare(b.teamId));
 }
+
+export function simulationStats(matches:SimMatch[],results:SimResult[]){
+ const ids=new Set(matches.map(m=>m.id));const valid=results.filter(r=>ids.has(r.matchId));
+ const total=valid.length,draws=valid.filter(r=>r.winner==='draw').length;
+ const scored=valid.reduce((sum,r)=>sum+r.scoreA+r.scoreB,0);
+ return {totalMatches:matches.length,finished:total,draws,decisive:total-draws,totalPointsScored:scored,averagePointsPerMatch:total?Math.round(scored/total*100)/100:0};
+}
