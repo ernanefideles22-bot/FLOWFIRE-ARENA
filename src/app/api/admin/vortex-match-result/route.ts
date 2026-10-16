@@ -9,7 +9,7 @@ export async function POST(req:NextRequest){
  if(typeof body.matchId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.matchId))return NextResponse.json({error:'Partida inválida'},{status:400});
  try{
   await ensureSchema();
-  const m=await db().query('SELECT vortex_session_id,vortex_room_id,status FROM arena_matches WHERE id=$1',[body.matchId]);
+  const m=await db().query('SELECT m.vortex_session_id,m.vortex_room_id,m.status,a.players AS players_a,b.players AS players_b FROM arena_matches m JOIN arena_teams a ON a.id=m.team_a JOIN arena_teams b ON b.id=m.team_b WHERE m.id=$1',[body.matchId]);
   if(!m.rowCount||!m.rows[0].vortex_session_id||!m.rows[0].vortex_room_id)return NextResponse.json({error:'Sessão Vortex não encontrada'},{status:404});
   if(!process.env.VORTEX_TOKEN)return NextResponse.json({error:'Vortex não configurada'},{status:503});
   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
@@ -18,8 +18,32 @@ export async function POST(req:NextRequest){
    const res=await fetch(base+'/rooms/'+encodeURIComponent(m.rows[0].vortex_session_id)+'/result',{headers:{Authorization:'Bearer '+process.env.VORTEX_TOKEN,Accept:'application/json'},cache:'no-store',signal:controller.signal});
    const raw=await res.text();let data:unknown;try{data=JSON.parse(raw);}catch{return NextResponse.json({error:'Resposta Vortex não é JSON',providerStatus:res.status},{status:502});}
    if(!res.ok)return NextResponse.json({error:'Resultado ainda indisponível ou recusado pela Vortex',providerStatus:res.status,providerResponse:data},{status:res.status===404?404:502});
-   // Provider response shape and player/team identity are not yet validated: never declare a winner automatically.
-   return NextResponse.json({matchId:body.matchId,providerResponse:data,recorded:false,winnerVerified:false,reason:'Conferir campos e identidade dos jogadores antes de gravar o resultado'});
+   const result=data as Record<string,unknown>;
+   const teams=Array.isArray(result.teams)?result.teams as Record<string,unknown>[]:[];
+   const normalize=(s:string)=>s.normalize('NFKC').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+   const roster=(value:unknown):string[]=>Array.isArray(value)?value.filter((p):p is string=>typeof p==='string').map(normalize):[];
+   const a=roster(m.rows[0].players_a),b=roster(m.rows[0].players_b);
+   const mapping=teams.map(t=>({number:t.team,names:Array.isArray(t.players)?(t.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[]}));
+   const matches=(registered:string[],observed:string[])=>registered.length>0&&registered.every(name=>observed.filter(n=>n===name).length===1);
+   const teamA=mapping.filter(t=>matches(a,t.names)&&!b.some(n=>t.names.includes(n)));
+   const teamB=mapping.filter(t=>matches(b,t.names)&&!a.some(n=>t.names.includes(n)));
+   const finished=typeof result.finished_at==='string'&&!Number.isNaN(Date.parse(result.finished_at));
+   const valid=finished&&teamA.length===1&&teamB.length===1&&teamA[0].number!==teamB[0].number&&
+     (result.winner_team===teamA[0].number||result.winner_team===teamB[0].number)&&
+     teams.filter(t=>t.is_winner===true).length===1&&teams.some(t=>t.team===result.winner_team&&t.is_winner===true);
+   if(!valid)return NextResponse.json({matchId:body.matchId,providerResponse:data,recorded:false,winnerVerified:false,reason:'Identidade das duas equipes ou vencedor não verificados; exige conferência manual'});
+   const winner=result.winner_team===teamA[0].number?'team_a':'team_b';
+   const c=await db().connect();
+   try{
+     await c.query('BEGIN');
+     const locked=await c.query('SELECT status,vortex_session_id FROM arena_matches WHERE id=$1 FOR UPDATE',[body.matchId]);
+     if(locked.rows[0]?.vortex_session_id!==m.rows[0].vortex_session_id)throw Error('Sessão alterada');
+     if(locked.rows[0].status==='finished'){await c.query('COMMIT');return NextResponse.json({matchId:body.matchId,status:'finished',alreadyRecorded:true,winnerVerified:true,winner});}
+     await c.query("UPDATE arena_matches SET status='finished',vortex_result=$2::jsonb WHERE id=$1",[body.matchId,JSON.stringify({source:'vortex_verified',winner,providerWinnerTeam:result.winner_team,providerResult:data,verifiedAt:new Date().toISOString()})]);
+     await c.query('COMMIT');
+     return NextResponse.json({matchId:body.matchId,status:'finished',recorded:true,winnerVerified:true,winner,providerResponse:data});
+   }catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
+
   }finally{clearTimeout(timeout);}
  }catch{return NextResponse.json({error:'Falha na consulta ao resultado; nenhuma alteração feita'},{status:503});}
 }
