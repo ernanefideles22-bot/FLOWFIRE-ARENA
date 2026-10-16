@@ -32,8 +32,8 @@ export async function POST(req:NextRequest){
      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
      try{
       const r=await fetch(base+'/rooms/'+encodeURIComponent(session)+'/release',{method:'POST',headers:{Authorization:'Bearer '+process.env.VORTEX_TOKEN,Accept:'application/json'},signal:controller.signal,cache:'no-store'});
-      if(!r.ok)return NextResponse.json({error:'Vortex não confirmou liberação de todas as salas; banco preservado',backupId:id,providerStatus:r.status},{status:409});
-     }catch{return NextResponse.json({error:'Liberação incerta na Vortex; banco preservado',backupId:id},{status:409});}finally{clearTimeout(timer);}
+      if(!r.ok){console.error('Arena reset release rejected',{backupId:id,sessionId:session,providerStatus:r.status});return NextResponse.json({error:'Vortex não confirmou liberação de todas as salas; banco preservado',backupId:id,providerStatus:r.status,failedSession:session},{status:409});}
+     }catch(e){console.error('Arena reset release uncertain',{backupId:id,sessionId:session,error:e instanceof Error?e.name:'unknown'});return NextResponse.json({error:'Liberação incerta na Vortex; banco preservado',backupId:id,failedSession:session},{status:409});}finally{clearTimeout(timer);}
     }
    }
    await client.query('BEGIN');
