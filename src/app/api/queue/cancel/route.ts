@@ -13,7 +13,7 @@ export async function POST(req:NextRequest){
    const t=await c.query('SELECT mode FROM arena_teams WHERE id=$1 AND queue_token_hash=$2',[body.teamId,createHash('sha256').update(body.queueToken).digest('hex')]);
    if(!t.rowCount){await c.query('ROLLBACK');return NextResponse.json({error:'Equipe não autorizada'},{status:403});}
    await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[t.rows[0].mode]);
-   const matched=await c.query('SELECT 1 FROM arena_matches WHERE team_a=$1 OR team_b=$1 LIMIT 1',[body.teamId]);
+   const matched=await c.query('SELECT 1 FROM arena_matches WHERE (team_a=$1 OR team_b=$1) AND status<>$2 LIMIT 1',[body.teamId,'finished']);
    if(matched.rowCount){await c.query('COMMIT');return NextResponse.json({status:'matched',cancelled:false});}
    const removed=await c.query('DELETE FROM arena_queue WHERE team_id=$1 RETURNING team_id',[body.teamId]);
    await c.query('COMMIT');return NextResponse.json({status:'not_queued',cancelled:Boolean(removed.rowCount)});
