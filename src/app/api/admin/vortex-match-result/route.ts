@@ -20,16 +20,19 @@ export async function POST(req:NextRequest){
    if(!res.ok)return NextResponse.json({error:'Resultado ainda indisponível ou recusado pela Vortex',providerStatus:res.status,providerResponse:data},{status:res.status===404?404:502});
    const result=data as Record<string,unknown>;
    const teams=Array.isArray(result.teams)?result.teams as Record<string,unknown>[]:[];
-   const normalize=(s:string)=>s.normalize('NFKC').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+   // Preserve visible Free Fire symbols: deleting them can turn different players into the same nickname.
+   const normalize=(s:string)=>s.normalize('NFKC').trim().toLocaleLowerCase('und').replace(/\\s+/gu,' ');
+   // Some providers omit zero-width formatting marks. Ignore only those marks, never visible symbols.
+   const comparable=(s:string)=>normalize(s).replace(/[\\u200B-\\u200D\\u2060\\uFEFF]/gu,'');
    const roster=(value:unknown):string[]=>Array.isArray(value)?value.filter((p):p is string=>typeof p==='string').map(normalize):[];
    const a=roster(m.rows[0].players_a),b=roster(m.rows[0].players_b);
    const mapping=teams.map(t=>({number:t.team,names:Array.isArray(t.players)?(t.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[]}));
-   // Each observed nickname must uniquely identify one registered team, never both.
-   const allRegistered=[...a,...b].filter(Boolean);
-   const uniqueRegistration=new Set(allRegistered).size===allRegistered.length;
-   const observed=mapping.flatMap(t=>t.names).filter(Boolean);
-   const uniqueObserved=new Set(observed).size===observed.length;
-   const matches=(registered:string[],observedNames:string[])=>registered.some(name=>name.length>0&&observedNames.includes(name));
+   const allRegistered=[...a,...b];
+   const observed=mapping.flatMap(t=>t.names);
+   const validNames=(names:string[])=>names.every(Boolean)&&new Set(names.map(comparable)).size===names.length;
+   const uniqueRegistration=validNames(allRegistered);
+   const uniqueObserved=validNames(observed);
+   const matches=(registered:string[],observedNames:string[])=>registered.some(name=>observedNames.some(n=>comparable(n)===comparable(name)));
    const teamA=mapping.filter(t=>matches(a,t.names)&&!matches(b,t.names));
    const teamB=mapping.filter(t=>matches(b,t.names)&&!matches(a,t.names));
    const unambiguous=uniqueRegistration&&uniqueObserved&&mapping.length===2&&teamA.length===1&&teamB.length===1&&teamA[0].number!==teamB[0].number;
