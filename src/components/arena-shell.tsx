@@ -28,6 +28,7 @@ export function ArenaShell({children,admin=false}:{children:ReactNode;admin?:boo
    <div className="sidebar-bottom"><span className="status-dot"/> AMBIENTE DE TESTES <small>FLOWFIRE ARENA © 2026</small></div>
   </aside>
   <div className="arena-workspace">
+   <div className="arena-ambience" aria-hidden="true"><div className="ambient-grid"/><div className="ambient-aura ambient-aura-one"/><div className="ambient-aura ambient-aura-two"/><div className="ambient-embers">{Array.from({length:18},(_,i)=><i key={i} style={{left:`${3+(i*17)%95}%`,animationDelay:`${i*-.9}s`,animationDuration:`${11+i%7}s`}}/>)}</div></div>
    <header className="arena-topbar"><div className="topbar-brand"><img className="topbar-logo" src="/flowfire-arena-logo.png" alt="" width="44" height="44"/><span>FLOWFIRE <b>ARENA</b><small>{admin?'WORKSPACE / OPERAÇÕES':'PLAY / CONTRA SQUAD'}</small></span></div><div className="topbar-right"><span className="environment-tag">BETA</span><span className="workspace-tag"><ArenaIcon name={admin?'shield':'sword'}/>{admin?'Organização':'Área do jogador'}</span></div></header>
    <main id="main-content" className={admin?'arena-content admin-content':'arena-content player-content'}>{children}</main>
    <footer className="arena-footer"><span>FLOWFIRE <b>ARENA</b><small>O próximo nível da sua competição.</small></span><span>CONTRA SQUAD <i/> 1×1 · 2×2 · 4×4</span></footer>
