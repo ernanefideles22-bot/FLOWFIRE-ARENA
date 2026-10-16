@@ -5,6 +5,7 @@ export const runtime='nodejs';
 function authorized(req:NextRequest){const k=process.env.ADMIN_API_KEY,s=req.headers.get('x-admin-key');if(!k||!s)return false;const a=Buffer.from(k),b=Buffer.from(s);return a.length===b.length&&timingSafeEqual(a,b);}
 export async function POST(req:NextRequest){
  if(!authorized(req))return NextResponse.json({error:'Unauthorized'},{status:401});
+ if(process.env.VORTEX_ROOM_CREATION_ENABLED!=='true')return NextResponse.json({error:'Vortex room creation disabled by environment safety gate'},{status:403});
  let body:{confirm?:string};try{body=await req.json();}catch{return NextResponse.json({error:'Invalid JSON'},{status:400});}
  if(body.confirm!=='CREATE_ONE_CREDITED_TEST_ROOM')return NextResponse.json({error:'Explicit confirmation required'},{status:400});
  if(!process.env.VORTEX_TOKEN)return NextResponse.json({error:'Vortex not configured'},{status:503});
