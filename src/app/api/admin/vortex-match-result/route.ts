@@ -24,13 +24,15 @@ export async function POST(req:NextRequest){
    const roster=(value:unknown):string[]=>Array.isArray(value)?value.filter((p):p is string=>typeof p==='string').map(normalize):[];
    const a=roster(m.rows[0].players_a),b=roster(m.rows[0].players_b);
    const mapping=teams.map(t=>({number:t.team,names:Array.isArray(t.players)?(t.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[]}));
-   // Accept a partial roster match, but never infer teams from a single shared or ambiguous nickname.
-   const matches=(registered:string[],observed:string[])=>registered.some(name=>name.length>0&&observed.filter(n=>n===name).length===1);
-   const teamA=mapping.filter(t=>matches(a,t.names)&&!matches(b,t.names));
-   const teamB=mapping.filter(t=>matches(b,t.names)&&!matches(a,t.names));
+   // Each observed nickname must uniquely identify one registered team, never both.
    const allRegistered=[...a,...b].filter(Boolean);
    const uniqueRegistration=new Set(allRegistered).size===allRegistered.length;
-   const unambiguous=uniqueRegistration&&teamA.length===1&&teamB.length===1&&teamA[0].number!==teamB[0].number;
+   const observed=mapping.flatMap(t=>t.names).filter(Boolean);
+   const uniqueObserved=new Set(observed).size===observed.length;
+   const matches=(registered:string[],observedNames:string[])=>registered.some(name=>name.length>0&&observedNames.includes(name));
+   const teamA=mapping.filter(t=>matches(a,t.names)&&!matches(b,t.names));
+   const teamB=mapping.filter(t=>matches(b,t.names)&&!matches(a,t.names));
+   const unambiguous=uniqueRegistration&&uniqueObserved&&mapping.length===2&&teamA.length===1&&teamB.length===1&&teamA[0].number!==teamB[0].number;
    const finished=typeof result.finished_at==='string'&&!Number.isNaN(Date.parse(result.finished_at));
    const valid=finished&&unambiguous&&
      (result.winner_team===teamA[0].number||result.winner_team===teamB[0].number)&&
