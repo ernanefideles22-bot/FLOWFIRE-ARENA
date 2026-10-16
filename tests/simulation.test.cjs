@@ -1,0 +1,13 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
+const src=fs.readFileSync('src/lib/simulation.ts','utf8');const js=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const module={exports:{}};vm.runInNewContext(js,{module,exports:module.exports},{timeout:1000});const {simulateMatchmaking,simulateResult}=module.exports;
+const team=(id,mode,n)=>({id,mode,players:Array.from({length:n},(_,i)=>id+i)});
+test('pairs 1v1 without mixing other modes',()=>{const r=simulateMatchmaking([team('a','1v1',1),team('b','2v2',2),team('c','1v1',1)]);assert.equal(r.matches.length,1);assert.equal(r.matches[0].teamB,'c');assert.equal(r.waiting[0],'b');});
+test('pairs 2v2 and 4v4 independently',()=>{const r=simulateMatchmaking([team('a','2v2',2),team('b','4v4',4),team('c','2v2',2),team('d','4v4',4)]);assert.equal(r.matches.length,2);assert.equal(r.waiting.length,0);});
+test('rejects repeated team',()=>{const r=simulateMatchmaking([team('a','1v1',1),team('a','1v1',1)]);assert.equal(r.matches.length,0);assert.equal(r.rejected.length,1);});
+test('rejects invalid team capacity',()=>{const r=simulateMatchmaking([team('a','4v4',2)]);assert.equal(r.rejected.length,1);});
+test('does not touch provider',()=>{const r=simulateMatchmaking([]);assert.equal(r.providerCalled,false);assert.equal(r.creditsConsumed,false);});
+test('team A wins',()=>assert.equal(simulateResult('m',4,2).winner,'A'));
+test('team B wins',()=>assert.equal(simulateResult('m',1,4).winner,'B'));
+test('draw',()=>assert.equal(simulateResult('m',2,2).winner,'draw'));
+test('negative score rejected',()=>assert.throws(()=>simulateResult('m',-1,2)));
+test('fractional score rejected',()=>assert.throws(()=>simulateResult('m',1.5,2)));
