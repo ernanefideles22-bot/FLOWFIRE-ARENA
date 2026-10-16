@@ -15,9 +15,9 @@ export async function POST(req:NextRequest){
    if(!t.rowCount){await c.query('ROLLBACK');return NextResponse.json({error:'Equipe não autorizada'},{status:403});}
    const mode=t.rows[0].mode;
    await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[mode]);
-   const existing=await c.query('SELECT id,team_a,team_b FROM arena_matches WHERE team_a=$1 OR team_b=$1 LIMIT 1',[body.teamId]);
-   if(existing.rowCount){await c.query('COMMIT');return NextResponse.json({status:'ready',matchId:existing.rows[0].id,mode});}
-   const queued=await c.query('SELECT q.team_id FROM arena_queue q JOIN arena_teams t ON t.id=q.team_id WHERE q.team_id<>$1 AND q.mode=$2 AND t.queue_token_hash IS NOT NULL ORDER BY q.created_at LIMIT 1',[body.teamId,mode]);
+   const existing=await c.query('SELECT id,team_a,team_b FROM arena_matches WHERE team_a=$1 OR team_b=$1 ORDER BY created_at DESC LIMIT 1',[body.teamId]);
+   if(existing.rowCount){await c.query('DELETE FROM arena_queue WHERE team_id=$1',[body.teamId]);await c.query('COMMIT');return NextResponse.json({status:'ready',matchId:existing.rows[0].id,mode});}
+   const queued=await c.query('SELECT q.team_id FROM arena_queue q JOIN arena_teams t ON t.id=q.team_id WHERE q.team_id<>$1 AND q.mode=$2 AND t.mode=$2 AND t.queue_token_hash IS NOT NULL AND NOT EXISTS (SELECT 1 FROM arena_matches m WHERE m.team_a=q.team_id OR m.team_b=q.team_id) ORDER BY q.created_at LIMIT 1',[body.teamId,mode]);
    if(!queued.rowCount){await c.query('INSERT INTO arena_queue(team_id,mode) VALUES($1,$2) ON CONFLICT(team_id) DO NOTHING',[body.teamId,mode]);await c.query('COMMIT');return NextResponse.json({status:'waiting',mode});}
    const opponent=queued.rows[0].team_id;const matchId=randomUUID();
    await c.query('DELETE FROM arena_queue WHERE team_id IN ($1,$2)',[body.teamId,opponent]);
