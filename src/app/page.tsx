@@ -36,11 +36,11 @@ export default function Home(){
    const response=await fetch('/api/match-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});
    const data=await response.json();if(!response.ok)throw Error(data.error||'Consulta indisponível');
    if(data.matchId){setMatch(data);setQueueStatus('Confronto formado!');}
-   else{setMatch(null);setQueueStatus('Aguardando adversário da mesma modalidade.');}
+   else{setMatch(null);setQueueStatus(data.status==='waiting'?'Aguardando adversário da mesma modalidade.':'Equipe cadastrada. Você ainda não está na fila.');}
   }catch(e){setNotice(e instanceof Error?e.message:'Falha na consulta');}
   finally{setSaving(false);}
  };
- useEffect(()=>{if(!savedId||!queueToken)return;let active=true;const refresh=async()=>{try{const r=await fetch('/api/match-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken}),cache:'no-store'});if(!r.ok)return;const data=await r.json();if(!active)return;if(data.matchId){setMatch(data);setQueueStatus('Confronto formado!');}}catch{}};void refresh();const timer=setInterval(()=>{void refresh()},12000);return()=>{active=false;clearInterval(timer)};},[savedId,queueToken]);
+ useEffect(()=>{if(!savedId||!queueToken)return;let active=true;const refresh=async()=>{try{const r=await fetch('/api/match-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken}),cache:'no-store'});if(!r.ok)return;const data=await r.json();if(!active)return;if(data.matchId){setMatch(data);setQueueStatus('Confronto formado!');}else{setMatch(null);setQueueStatus(data.status==='waiting'?'Aguardando adversário da mesma modalidade.':'Equipe cadastrada. Você ainda não está na fila.');}}catch{}};void refresh();const timer=setInterval(()=>{void refresh()},12000);return()=>{active=false;clearInterval(timer)};},[savedId,queueToken]);
  const cancelQueue=async()=>{
   if(!savedId||!queueToken)return;setSaving(true);setNotice('');
   try{const r=await fetch('/api/queue/cancel',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});const data=await r.json();if(!r.ok)throw Error(data.error||'Falha ao sair da fila');if(data.status==='matched'){setQueueStatus('Confronto já formado; não é possível cancelar a partida.');}else{setQueueStatus('Você não está na fila. Seu cadastro foi preservado.');}}
