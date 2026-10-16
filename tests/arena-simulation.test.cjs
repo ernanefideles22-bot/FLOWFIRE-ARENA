@@ -11,7 +11,7 @@ for(const [mode,n] of Object.entries(capacity)){
  test(mode+' rejects missing player',()=>assert.throws(()=>validateTeam(mode,{...team,players:team.players.slice(1)})));
  test(mode+' rejects extra player',()=>assert.throws(()=>validateTeam(mode,{...team,players:[...team.players,'Extra']})));
  test(mode+' rejects blank captain',()=>assert.throws(()=>validateTeam(mode,{...team,captain:'  '})));
- test(mode+' rejects duplicate player',()=>assert.throws(()=>validateTeam(mode,{...team,players:Array(n).fill('Same')}),n>1?undefined:undefined));
+ if(n>1)test(mode+' rejects duplicate player',()=>assert.throws(()=>validateTeam(mode,{...team,players:Array(n).fill('Same')})));
 }
 test('rejects blank team name',()=>assert.throws(()=>validateTeam('1v1',{name:' ',captain:'C',players:['A']})));
 test('normalizes whitespace',()=>assert.equal(validateTeam('1v1',{name:' ALFA ',captain:' C ',players:[' A ']}).name,'ALFA'));
