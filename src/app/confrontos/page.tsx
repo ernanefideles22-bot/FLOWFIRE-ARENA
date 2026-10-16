@@ -1,0 +1,18 @@
+'use client';
+import {useCallback,useEffect,useState} from 'react';
+import {ArenaShell,ArenaHero} from '../../components/arena-shell';
+type Challenge={teamId:string;mode:string;teamName:string;captain:string;createdAt:string};
+type Credentials={teamId:string;queueToken:string;mode:string;name:string};
+export default function ChallengesPage(){
+ const [mine,setMine]=useState<Credentials|null>(null),[items,setItems]=useState<Challenge[]>([]),[loading,setLoading]=useState(false),[notice,setNotice]=useState('');
+ useEffect(()=>{try{const x=JSON.parse(localStorage.getItem('flowfire-arena-team-v1')||'null');if(x?.teamId&&x?.queueToken&&x?.mode)setMine(x);}catch{}},[]);
+ const refresh=useCallback(async()=>{try{const r=await fetch('/api/challenges',{cache:'no-store'});if(!r.ok)throw Error('Não foi possível consultar desafios');const d=await r.json();setItems(d.challenges||[]);}catch(e){setNotice(e instanceof Error?e.message:'Erro ao consultar desafios');}},[]);
+ useEffect(()=>{void refresh();const timer=setInterval(()=>void refresh(),12000);return()=>clearInterval(timer);},[refresh]);
+ async function action(kind:'create'|'accept'|'cancel',opponentId?:string){if(!mine)return;setLoading(true);setNotice('');try{const r=await fetch('/api/challenges',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:mine.teamId,queueToken:mine.queueToken,action:kind,opponentId})});const d=await r.json();if(!r.ok)throw Error(d.error||'Operação não concluída');setNotice(kind==='create'?'Seu desafio está visível na sala de espera.':kind==='cancel'?'Desafio cancelado.':'Confronto confirmado! Consulte sua partida na área da equipe.');await refresh();}catch(e){setNotice(e instanceof Error?e.message:'Falha na operação');}finally{setLoading(false);}}
+ const own=items.some(x=>x.teamId===mine?.teamId);
+ return <ArenaShell><ArenaHero/><div className="section-heading"><h2>Sala de espera</h2></div>
+ <section className="panel" style={{marginBottom:20}}><h2>Desafios abertos</h2><p>Crie um desafio e aguarde alguém aceitar, ou escolha um adversário disponível. Nenhuma sala Vortex é criada automaticamente.</p>
+ {!mine?<p>Para desafiar ou aceitar, <a href="/#inscricao" style={{color:'#ff9a57'}}>cadastre sua equipe primeiro</a>.</p>:<div><p>Sua equipe: <strong>{mine.name}</strong> · {mine.mode.replace('v','x')}</p>{own?<button disabled={loading} onClick={()=>action('cancel')} style={{padding:12,borderRadius:8}}>Cancelar meu desafio</button>:<button disabled={loading} onClick={()=>action('create')} className="primary-button" style={{padding:12,border:0,borderRadius:8}}>Criar desafio aberto</button>} <a href="/#inscricao" style={{marginLeft:14,color:'#ffb582'}}>Minha equipe</a></div>}
+ {notice&&<p role="status">{notice}</p>}</section>
+ <div className="match-grid">{items.length===0?<section className="panel"><p>Nenhum desafio aberto no momento. Seja o primeiro a criar um.</p></section>:items.map(x=><article className="match-card" key={x.teamId} style={{padding:20,borderRadius:14,background:'#19131a',border:'1px solid #6c3923'}}><div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><strong>{x.teamName}</strong><span style={{color:'#ffae70'}}>{x.mode.replace('v','x')}</span></div><p style={{color:'#b8a8a1'}}>Capitão: {x.captain}</p><p style={{color:'#83d9aa'}}>Aguardando adversário</p>{mine&&mine.teamId!==x.teamId&&<button disabled={loading||mine.mode!==x.mode} onClick={()=>action('accept',x.teamId)} style={{padding:12,borderRadius:8,background:'#ed6a32',color:'#fff',border:0}}>{mine.mode===x.mode?'Aceitar confronto':'Modalidade diferente'}</button>}{mine?.teamId===x.teamId&&<span>Seu desafio</span>}</article>)}</div></ArenaShell>;
+}
