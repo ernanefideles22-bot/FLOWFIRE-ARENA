@@ -40,6 +40,7 @@ export default function Home(){
   }catch(e){setNotice(e instanceof Error?e.message:'Falha na consulta');}
   finally{setSaving(false);}
  };
+ useEffect(()=>{if(!savedId||!queueToken)return;let active=true;const refresh=async()=>{try{const r=await fetch('/api/match-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken}),cache:'no-store'});if(!r.ok)return;const data=await r.json();if(!active)return;if(data.matchId){setMatch(data);setQueueStatus('Confronto formado!');}}catch{}};void refresh();const timer=setInterval(()=>{void refresh()},12000);return()=>{active=false;clearInterval(timer)};},[savedId,queueToken]);
  const joinQueue=async()=>{
   setSaving(true);setNotice('');
   try{
