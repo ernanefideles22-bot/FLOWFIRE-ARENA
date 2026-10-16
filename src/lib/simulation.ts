@@ -3,7 +3,7 @@ export type SimTeam={id:string;mode:Mode;players:string[]};
 export type SimMatch={id:string;mode:Mode;teamA:string;teamB:string;status:'ready'};
 export function simulateMatchmaking(teams:SimTeam[]){
  const queue:Record<Mode,SimTeam[]>={'1v1':[],'2v2':[],'4v4':[]};
- const seen=new Set<string>(),matches:SimMatch[],rejected:string[];const matchesOut:SimMatch[]=[];const rejectedOut:string[]=[];
+ const seen=new Set<string>();const matchesOut:SimMatch[]=[];const rejectedOut:string[]=[];
  const capacity:Record<Mode,number>={'1v1':1,'2v2':2,'4v4':4};
  for(const t of teams){
   if(!t||typeof t.id!=='string'||!t.id.trim()||seen.has(t.id)||!Object.hasOwn(capacity,t.mode)||!Array.isArray(t.players)||t.players.length!==capacity[t.mode]||t.players.some(p=>typeof p!=='string'||!p.trim())||new Set(t.players.map(p=>p.trim().toLowerCase())).size!==t.players.length){rejectedOut.push(t?.id||'invalid');continue;}
