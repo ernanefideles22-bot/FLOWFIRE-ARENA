@@ -40,7 +40,7 @@ export async function POST(req:NextRequest){
    await client.query('SELECT pg_advisory_xact_lock(20261016,1)');
    const current=await client.query('SELECT id,team_a,team_b,vortex_session_id FROM arena_matches ORDER BY id');
    const old=(snapshot.arena_matches||[]) as any[];
-   if(current.rows.length!==old.length||current.rows.some((m:any,i:number)=>m.id!==old[i]?.id)){
+   if(current.rows.length!==old.length||current.rows.some((m:any,i:number)=>m.id!==[...old].sort((a,b)=>a.id.localeCompare(b.id))[i]?.id)){
     await client.query('ROLLBACK');return NextResponse.json({error:'Confrontos alterados durante liberação; backup preservado, limpeza bloqueada',backupId:id},{status:409});
    }
    for(const table of tables){
