@@ -35,13 +35,20 @@ export async function POST(req:NextRequest){
    const matches=(registered:string[],observedNames:string[])=>registered.some(name=>observedNames.some(n=>comparable(n)===comparable(name)));
    const teamA=mapping.filter(t=>matches(a,t.names)&&!matches(b,t.names));
    const teamB=mapping.filter(t=>matches(b,t.names)&&!matches(a,t.names));
-   const unambiguous=uniqueRegistration&&uniqueObserved&&mapping.length===2&&teamA.length===1&&teamB.length===1&&teamA[0].number!==teamB[0].number;
    const finished=typeof result.finished_at==='string'&&!Number.isNaN(Date.parse(result.finished_at));
-   const valid=finished&&unambiguous&&
-     (result.winner_team===teamA[0].number||result.winner_team===teamB[0].number)&&
-     teams.filter(t=>t.is_winner===true).length===1&&teams.some(t=>t.team===result.winner_team&&t.is_winner===true);
-   if(!valid)return NextResponse.json({matchId:body.matchId,providerResponse:data,recorded:false,winnerVerified:false,reason:'Identidade das duas equipes ou vencedor não verificados; exige conferência manual'});
-   const winner=result.winner_team===teamA[0].number?'team_a':'team_b';
+   const winnerTeams=teams.filter(t=>t.is_winner===true);
+   const providerWinner=winnerTeams.length===1&&winnerTeams[0].team===result.winner_team?winnerTeams[0]:null;
+   // One exclusive exact nickname is sufficient, provided the other Vortex team
+   // does not contain a conflicting nickname registered to the opposite roster.
+   const winningA=providerWinner!==null&&matches(a,Array.isArray(providerWinner.players)?(providerWinner.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[])&&!matches(b,Array.isArray(providerWinner.players)?(providerWinner.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[]);
+   const winningB=providerWinner!==null&&matches(b,Array.isArray(providerWinner.players)?(providerWinner.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[])&&!matches(a,Array.isArray(providerWinner.players)?(providerWinner.players as Record<string,unknown>[]).map(p=>typeof p.nickname==='string'?normalize(p.nickname):''):[]);
+   const losingTeam=mapping.find(t=>t.number!==result.winner_team);
+   const conflict=!!losingTeam&&((winningA&&matches(a,losingTeam.names))||(winningB&&matches(b,losingTeam.names)));
+   const valid=finished&&uniqueRegistration&&uniqueObserved&&mapping.length===2&&providerWinner!==null&&!conflict&&
+      ((winningA&&!winningB&&teamA.length===1&&teamA[0].number===result.winner_team)||
+       (winningB&&!winningA&&teamB.length===1&&teamB[0].number===result.winner_team));
+   if(!valid)return NextResponse.json({matchId:body.matchId,providerResponse:data,recorded:false,winnerVerified:false,reason:'Nenhum nick exclusivo do vencedor ou identificação contraditória; exige conferência manual'});
+   const winner=winningA?'team_a':'team_b';
    const c=await db().connect();
    try{
      await c.query('BEGIN');
