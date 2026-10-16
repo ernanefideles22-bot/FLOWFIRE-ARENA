@@ -58,7 +58,7 @@ export default function Home(){
  };
 
  return <main style={{maxWidth:680,margin:'auto',padding:'24px 16px 72px',fontFamily:'Arial,sans-serif',color:'#f5f7ff',minHeight:'100vh',background:'radial-gradient(ellipse at top,#3b1b0e 0%,#110e10 38%,#08090c 100%)'}}>
-  <header style={{textAlign:'center',padding:'14px 0 6px'}}><img src="/flowfire-arena-emblem.svg" alt="Flowfire Arena — escudo com fênix" style={{width:'min(290px,76vw)',display:'block',margin:'auto',filter:'drop-shadow(0 0 16px #ed5d3a55)'}}/><div style={{fontWeight:900,fontSize:24,letterSpacing:2,color:'#ffab50',textShadow:'0 0 18px #eb541855'}}>FLOWFIRE <span style={{color:'#e7e9ed'}}>ARENA</span></div></header>
+  <header style={{textAlign:'center',padding:'14px 0 6px'}}><img src="/flowfire-arena-logo.png" alt="FLOWFIRE ARENA — logo oficial" width={1536} height={1536} style={{width:'100%',maxWidth:420,height:'auto',objectFit:'contain',display:'block',margin:'0 auto 16px'}}/></header>
   <h1 style={{marginTop:52,fontSize:36}}>Contra Squad</h1>
   <p style={{color:'#a8b4c8'}}>Cadastre sua equipe para partidas competitivas.</p>
   <section style={{background:'linear-gradient(145deg,#211612,#111016)',border:'1px solid #744021',borderRadius:16,padding:24,marginTop:24}}>
