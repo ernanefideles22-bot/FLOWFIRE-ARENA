@@ -1,6 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {timingSafeEqual} from 'node:crypto';
-import {simulateMatchmaking,simulateResult,simulateStandings,type SimTeam} from '../../../../lib/simulation';
+import {simulateMatchmaking,simulateResult,simulateStandings,simulationStats,type SimTeam} from '../../../../lib/simulation';
 export const runtime='nodejs';
 function authorized(req:NextRequest){const k=process.env.ADMIN_API_KEY,s=req.headers.get('x-admin-key');if(!k||!s)return false;const a=Buffer.from(k),b=Buffer.from(s);return a.length===b.length&&timingSafeEqual(a,b);}
 export async function POST(req:NextRequest){
@@ -11,6 +11,6 @@ export async function POST(req:NextRequest){
  try{
   const result=simulateMatchmaking(body.teams);
   const results=result.matches.map((m,i)=>simulateResult(m.id,body.scores?.[i]?.scoreA??0,body.scores?.[i]?.scoreB??0));
-  return NextResponse.json({...result,results,standings:simulateStandings(result.matches,results),simulated:true,databaseWritten:false});
+  return NextResponse.json({...result,results,standings:simulateStandings(result.matches,results),stats:simulationStats(result.matches,results),simulated:true,databaseWritten:false});
  }catch{return NextResponse.json({error:'Placares inválidos'},{status:400});}
 }
