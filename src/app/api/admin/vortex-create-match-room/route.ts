@@ -5,7 +5,7 @@ export const runtime='nodejs';
 function authorized(req:NextRequest){const k=process.env.ADMIN_API_KEY,s=req.headers.get('x-admin-key');if(!k||!s)return false;const a=Buffer.from(k),b=Buffer.from(s);return a.length===b.length&&timingSafeEqual(a,b);}
 export async function POST(req:NextRequest){
  if(!authorized(req))return NextResponse.json({error:'Não autorizado'},{status:401});
- if(process.env.VORTEX_ROOM_CREATION_ENABLED!=='true')return NextResponse.json({error:'Criação de salas desativada no Railway'},{status:403});
+ if(process.env.VORTEX_ROOM_CREATION_ENABLED!=='true')return NextResponse.json({error:'Criação Vortex bloqueada: VORTEX_ROOM_CREATION_ENABLED não está habilitada no Railway. Valide o formato 1x1/2x2 antes de ativar.',code:'VORTEX_CREATION_DISABLED',retryBlocked:true},{status:403});
  let body:{matchId?:string;confirm?:string};try{body=await req.json();}catch{return NextResponse.json({error:'JSON inválido'},{status:400});}
  if(typeof body.matchId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.matchId))return NextResponse.json({error:'Partida inválida'},{status:400});
  if(body.confirm!=='CREATE_ONE_CREDITED_MATCH_ROOM')return NextResponse.json({error:'Confirmação explícita obrigatória'},{status:400});
@@ -20,7 +20,7 @@ export async function POST(req:NextRequest){
    if(!['1v1','2v2'].includes(m.rows[0].mode)||m.rows[0].status!=='ready'){await c.query('ROLLBACK');return NextResponse.json({error:'Somente partidas 1x1 e 2x2 prontas para teste'},{status:409});}
    const approval=await c.query('SELECT approved FROM arena_room_approvals WHERE match_id=$1',[body.matchId]);
    const reservation=await c.query('SELECT state FROM arena_room_reservations WHERE match_id=$1',[body.matchId]);
-   if(approval.rows[0]?.approved!==true||reservation.rows[0]?.state!=='reserved'){await c.query('ROLLBACK');return NextResponse.json({error:'Autorize e reserve a partida antes da criação'},{status:403});}
+   if(approval.rows[0]?.approved!==true||reservation.rows[0]?.state!=='reserved'){await c.query('ROLLBACK');return NextResponse.json({error:'Autorização ou reserva inválida. Consulte o estado da partida e faça a reserva antes de criar a sala.',code:'MATCH_NOT_RESERVED',retryBlocked:true},{status:403});}
    const reserved=await c.query("UPDATE arena_room_reservations SET state='uncertain' WHERE match_id=$1 AND state='reserved' RETURNING match_id",[body.matchId]);
    if(!reserved.rowCount){await c.query('ROLLBACK');return NextResponse.json({error:'Tentativa já realizada'},{status:409});}
    await c.query('COMMIT');
