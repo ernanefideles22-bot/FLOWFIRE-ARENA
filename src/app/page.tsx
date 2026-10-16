@@ -1,5 +1,5 @@
 'use client';
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 type Mode='1v1'|'2v2'|'4v4';
 const count:Record<Mode,number>={'1v1':1,'2v2':2,'4v4':4};
 const field:React.CSSProperties={display:'block',width:'100%',boxSizing:'border-box',padding:12,marginTop:8,background:'#0c1323',color:'white',border:'1px solid #3b4963',borderRadius:8};
@@ -15,6 +15,8 @@ export default function Home(){
  const [queueToken,setQueueToken]=useState('');
  const [queueStatus,setQueueStatus]=useState('');
  const [match,setMatch]=useState<{matchId:string;mode:string;teamA:{name:string;players:string[]};teamB:{name:string;players:string[]}}|null>(null);
+ useEffect(()=>{try{const saved=window.localStorage.getItem('flowfire-arena-team-v1');if(!saved)return;const x=JSON.parse(saved);if(!['1v1','2v2','4v4'].includes(x.mode)||typeof x.teamId!=='string'||typeof x.queueToken!=='string')return;setMode(x.mode);setTeam(x.name||'');setCaptain(x.captain||'');setPlayers(Array.isArray(x.players)?x.players:Array(count[x.mode]).fill(''));setSavedId(x.teamId);setQueueToken(x.queueToken);setPreview(true);setNotice('Cadastro recuperado deste dispositivo.');}catch{window.localStorage.removeItem('flowfire-arena-team-v1');}},[]);
+ const clearSaved=()=>{window.localStorage.removeItem('flowfire-arena-team-v1');setSavedId('');setQueueToken('');setQueueStatus('');setMatch(null);setPreview(false);setTeam('');setCaptain('');setPlayers(Array(count[mode]).fill(''));setNotice('Cadastro local desvinculado deste navegador.');};
  const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('');setQueueToken('');setQueueStatus('');setMatch(null)};
  const register=async()=>{
   setSaving(true);setNotice('');
@@ -22,8 +24,8 @@ export default function Home(){
    const response=await fetch('/api/teams',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode,team:{name:team,captain,players}})});
    const data=await response.json();
    if(!response.ok)throw new Error(data.error||'Falha ao cadastrar');
-   setSavedId(data.teamId);setQueueToken(data.queueToken);setMatch(null);
-   setNotice('Equipe cadastrada no banco de dados. O pareamento ainda não está disponível ao público.');
+   setSavedId(data.teamId);setQueueToken(data.queueToken);setMatch(null);window.localStorage.setItem('flowfire-arena-team-v1',JSON.stringify({teamId:data.teamId,queueToken:data.queueToken,mode,name:team,captain,players}));
+   setNotice('Equipe cadastrada no banco de dados. Este dispositivo poderá recuperar o cadastro.');
   }catch(error){setNotice(error instanceof Error?error.message:'Falha no cadastro');}
   finally{setSaving(false);}
  };
@@ -63,7 +65,7 @@ export default function Home(){
     <ol>{players.map((p,i)=><li key={i}>{p}</li>)}</ol>
     {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila / Consultar confronto'}</button><button type="button" disabled={saving} onClick={checkMatch} style={{marginTop:12,padding:12,borderRadius:8}}>Atualizar detalhes do confronto</button>{queueStatus&&<p role="status">{queueStatus}</p>}{match&&<section style={{marginTop:20,padding:18,border:'1px solid #455574',borderRadius:12}}><h2>Confronto {match.mode.replace('v','x')}</h2><p>Partida: {match.matchId}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{[match.teamA,match.teamB].map((t,i)=><div key={i} style={{background:'#0c1323',padding:12,borderRadius:10}}><b>{t.name}</b><ol style={{paddingLeft:22}}>{t.players.map((p,j)=><li key={j}>{p}</li>)}</ol></div>)}</div><p style={{color:'#ffbc88'}}>Sala Vortex ainda não criada.</p></section>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
     {notice&&<p role="status">{notice}</p>}
-    <button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Voltar</button>
+    <button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Voltar</button>{savedId&&<button type="button" onClick={clearSaved} style={{display:'block',marginTop:16}}>Desvincular cadastro deste dispositivo</button>}
    </div>:<form onSubmit={e=>{e.preventDefault();if(new Set(players.map(p=>p.trim().toLowerCase())).size!==players.length){setNotice('Não repita jogadores');return;}setNotice('');setPreview(true);}}>
     <label style={{display:'block',marginTop:16}}>Nome da equipe<input required maxLength={64} value={team} onChange={e=>setTeam(e.target.value)} style={field}/></label>
     <label style={{display:'block',marginTop:16}}>Nick do capitão<input required maxLength={64} value={captain} onChange={e=>setCaptain(e.target.value)} style={field}/></label>
@@ -73,6 +75,6 @@ export default function Home(){
     <button type="submit" style={{width:'100%',padding:14,background:'#ef662f',color:'white',fontWeight:700,border:0,borderRadius:8,marginTop:22}}>Revisar cadastro</button>
    </form>}
   </section>
-  <p style={{color:'#9ba8bf',fontSize:12,marginTop:24}}>Ambiente de testes • Sem pagamentos • Sem criação de salas • Pareamento experimental disponível após cadastro</p>
+  <p style={{color:'#9ba8bf',fontSize:12,marginTop:24}}>Ambiente de testes • Cadastro salvo neste navegador (evite dispositivos compartilhados) • Sem pagamentos • Sem criação de salas • Pareamento experimental disponível após cadastro</p>
  </main>;
 }
