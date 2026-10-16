@@ -14,19 +14,41 @@ export default function Home(){
  const [savedId,setSavedId]=useState('');
  const [queueToken,setQueueToken]=useState('');
  const [queueStatus,setQueueStatus]=useState('');
- const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('');setQueueToken('');setQueueStatus('')};
+ const [match,setMatch]=useState<{matchId:string;mode:string;teamA:{name:string;players:string[]};teamB:{name:string;players:string[]}}|null>(null);
+ const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('');setQueueToken('');setQueueStatus('');setMatch(null)};
  const register=async()=>{
   setSaving(true);setNotice('');
   try{
    const response=await fetch('/api/teams',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode,team:{name:team,captain,players}})});
    const data=await response.json();
    if(!response.ok)throw new Error(data.error||'Falha ao cadastrar');
-   setSavedId(data.teamId);setQueueToken(data.queueToken);
+   setSavedId(data.teamId);setQueueToken(data.queueToken);setMatch(null);
    setNotice('Equipe cadastrada no banco de dados. O pareamento ainda não está disponível ao público.');
   }catch(error){setNotice(error instanceof Error?error.message:'Falha no cadastro');}
   finally{setSaving(false);}
  };
- const joinQueue=async()=>{setSaving(true);setNotice('');try{const response=await fetch('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});const data=await response.json();if(!response.ok)throw Error(data.error||'Falha no pareamento');setQueueStatus(data.status==='ready'?'Confronto formado! Partida: '+data.matchId:'Aguardando adversário da mesma modalidade.');}catch(e){setNotice(e instanceof Error?e.message:'Falha no pareamento');}finally{setSaving(false)}};
+ const checkMatch=async()=>{
+  if(!savedId||!queueToken)return;
+  setSaving(true);setNotice('');
+  try{
+   const response=await fetch('/api/match-status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});
+   const data=await response.json();if(!response.ok)throw Error(data.error||'Consulta indisponível');
+   if(data.matchId){setMatch(data);setQueueStatus('Confronto formado!');}
+   else{setMatch(null);setQueueStatus('Aguardando adversário da mesma modalidade.');}
+  }catch(e){setNotice(e instanceof Error?e.message:'Falha na consulta');}
+  finally{setSaving(false);}
+ };
+ const joinQueue=async()=>{
+  setSaving(true);setNotice('');
+  try{
+   const response=await fetch('/api/queue',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({teamId:savedId,queueToken})});
+   const data=await response.json();if(!response.ok)throw Error(data.error||'Falha no pareamento');
+   if(data.status==='ready'){setQueueStatus('Confronto formado!');setMatch(null);}
+   else setQueueStatus('Aguardando adversário da mesma modalidade.');
+  }catch(e){setNotice(e instanceof Error?e.message:'Falha no pareamento');}
+  finally{setSaving(false);}
+ };
+
  return <main style={{maxWidth:620,margin:'auto',padding:24,fontFamily:'Arial,sans-serif',color:'#f5f7ff'}}>
   <header style={{fontWeight:900,fontSize:28,letterSpacing:1}}>🔥 FLOWFIRE <span style={{color:'#ff682f'}}>ARENA</span></header>
   <h1 style={{marginTop:52,fontSize:36}}>Contra Squad</h1>
@@ -39,7 +61,7 @@ export default function Home(){
     <h2>Confirme os dados</h2>
     <p><b>Equipe:</b> {team}</p><p><b>Capitão:</b> {captain}</p><p><b>Modalidade:</b> {mode.replace('v','x')}</p>
     <ol>{players.map((p,i)=><li key={i}>{p}</li>)}</ol>
-    {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila / Consultar confronto'}</button>{queueStatus&&<p role="status">{queueStatus}</p>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
+    {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila / Consultar confronto'}</button><button type="button" disabled={saving} onClick={checkMatch} style={{marginTop:12,padding:12,borderRadius:8}}>Atualizar detalhes do confronto</button>{queueStatus&&<p role="status">{queueStatus}</p>}{match&&<section style={{marginTop:20,padding:18,border:'1px solid #455574',borderRadius:12}}><h2>Confronto {match.mode.replace('v','x')}</h2><p>Partida: {match.matchId}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{[match.teamA,match.teamB].map((t,i)=><div key={i} style={{background:'#0c1323',padding:12,borderRadius:10}}><b>{t.name}</b><ol style={{paddingLeft:22}}>{t.players.map((p,j)=><li key={j}>{p}</li>)}</ol></div>)}</div><p style={{color:'#ffbc88'}}>Sala Vortex ainda não criada.</p></section>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
     {notice&&<p role="status">{notice}</p>}
     <button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Voltar</button>
    </div>:<form onSubmit={e=>{e.preventDefault();if(new Set(players.map(p=>p.trim().toLowerCase())).size!==players.length){setNotice('Não repita jogadores');return;}setNotice('');setPreview(true);}}>
