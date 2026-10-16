@@ -1,0 +1,1 @@
+import {NextResponse} from 'next/server';import {capacity} from '../../../lib/match';export async function GET(){return NextResponse.json({modes:Object.entries(capacity).map(([id,playersPerTeam])=>({id,playersPerTeam})),vortexModeValidation:'pending',paymentsEnabled:false});}
