@@ -57,13 +57,13 @@ export default function Home(){
   finally{setSaving(false);}
  };
 
- return <main style={{maxWidth:620,margin:'auto',padding:24,fontFamily:'Arial,sans-serif',color:'#f5f7ff'}}>
-  <header style={{fontWeight:900,fontSize:28,letterSpacing:1}}>🔥 FLOWFIRE <span style={{color:'#ff682f'}}>ARENA</span></header>
+ return <main style={{maxWidth:680,margin:'auto',padding:'24px 16px 72px',fontFamily:'Arial,sans-serif',color:'#f5f7ff',minHeight:'100vh',background:'radial-gradient(ellipse at top,#3b1b0e 0%,#110e10 38%,#08090c 100%)'}}>
+  <header style={{textAlign:'center',padding:'14px 0 6px'}}><img src="/flowfire-arena-emblem.svg" alt="Flowfire Arena — escudo com fênix" style={{width:'min(290px,76vw)',display:'block',margin:'auto',filter:'drop-shadow(0 0 16px #ed5d3a55)'}}/><div style={{fontWeight:900,fontSize:24,letterSpacing:2,color:'#ffab50',textShadow:'0 0 18px #eb541855'}}>FLOWFIRE <span style={{color:'#e7e9ed'}}>ARENA</span></div></header>
   <h1 style={{marginTop:52,fontSize:36}}>Contra Squad</h1>
   <p style={{color:'#a8b4c8'}}>Cadastre sua equipe para partidas competitivas.</p>
-  <section style={{background:'#151e31',borderRadius:16,padding:24,marginTop:24}}>
+  <section style={{background:'linear-gradient(145deg,#211612,#111016)',border:'1px solid #744021',borderRadius:16,padding:24,marginTop:24}}>
    <h2 style={{fontSize:20}}>Escolha a modalidade</h2>
-   <div style={{display:'flex',gap:8}}>{(['1v1','2v2','4v4'] as Mode[]).map(m=><button key={m} type="button" onClick={()=>changeMode(m)} style={{flex:1,padding:14,borderRadius:9,border:'1px solid #53617d',background:mode===m?'#ef662f':'#0c1323',color:'white',fontWeight:700}}>{m.replace('v','x')}</button>)}</div>
+   <div style={{display:'flex',gap:8}}>{(['1v1','2v2','4v4'] as Mode[]).map(m=><button key={m} type="button" onClick={()=>changeMode(m)} style={{flex:1,padding:14,borderRadius:9,border:'1px solid #53617d',background:mode===m?'linear-gradient(120deg,#f78322,#c53716)':'#17131a',color:'white',fontWeight:700}}>{m.replace('v','x')}</button>)}</div>
    <p style={{color:'#a8b4c8',fontSize:13}}>{count[mode]} jogador(es) por equipe. A compatibilidade com Vortex ainda será testada.</p>
    {preview?<div>
     <h2>Confirme os dados</h2>
