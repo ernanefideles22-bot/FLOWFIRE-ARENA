@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {ArenaShell,ArenaHero,ArenaIcon} from '../components/arena-shell';
 type Mode='1v1'|'2v2'|'4v4';
 const count:Record<Mode,number>={'1v1':1,'2v2':2,'4v4':4};
 const field:React.CSSProperties={display:'block',width:'100%',boxSizing:'border-box',padding:12,marginTop:8,background:'#0c1323',color:'white',border:'1px solid #3b4963',borderRadius:8};
@@ -57,14 +58,16 @@ export default function Home(){
   finally{setSaving(false);}
  };
 
- return <main style={{maxWidth:680,margin:'auto',padding:'24px 16px 72px',fontFamily:'Arial,sans-serif',color:'#f5f7ff',minHeight:'100vh',background:'radial-gradient(ellipse at top,#3b1b0e 0%,#110e10 38%,#08090c 100%)'}}>
-  <header style={{textAlign:'center',padding:'14px 0 6px'}}><img src="/flowfire-arena-logo.png" alt="FLOWFIRE ARENA — logo oficial" width={1536} height={1536} style={{width:'100%',maxWidth:420,height:'auto',objectFit:'contain',display:'block',margin:'0 auto 16px'}}/></header>
-  <h1 style={{marginTop:52,fontSize:36}}>Contra Squad</h1>
-  <p style={{color:'#a8b4c8'}}>Cadastre sua equipe para partidas competitivas.</p>
-  <section style={{background:'linear-gradient(145deg,#211612,#111016)',border:'1px solid #744021',borderRadius:16,padding:24,marginTop:24}}>
+ return <ArenaShell>
+ <div className="breadcrumb">Play <span>/ Arena de partidas</span></div>
+ <div className="page-kicker"><h2>Arena de partidas</h2><span>SEU TIME. SEU LEGADO.</span></div>
+ <ArenaHero/>
+ <div className="mode-strip">{[{mode:'1×1',name:'Duelo',desc:'Precisão individual'},{mode:'2×2',name:'Dupla',desc:'Conexão e estratégia'},{mode:'4×4',name:'Squad',desc:'Força em equipe'}].map(x=><div className="mode-tile" key={x.mode}><strong>{x.mode}</strong><div><b>{x.name}</b><small>{x.desc}</small></div><ArenaIcon name="sword"/></div>)}</div>
+ <div className="section-heading" id="inscricao"><h2>Prepare sua equipe</h2><span>CONTRA SQUAD</span></div>
+ <div className="registration-grid"><section className="panel registration-panel">
    <h2 style={{fontSize:20}}>Escolha a modalidade</h2>
-   <div style={{display:'flex',gap:8}}>{(['1v1','2v2','4v4'] as Mode[]).map(m=><button key={m} type="button" onClick={()=>changeMode(m)} style={{flex:1,padding:14,borderRadius:9,border:'1px solid #53617d',background:mode===m?'linear-gradient(120deg,#f78322,#c53716)':'#17131a',color:'white',fontWeight:700}}>{m.replace('v','x')}</button>)}</div>
-   <p style={{color:'#a8b4c8',fontSize:13}}>{count[mode]} jogador(es) por equipe. A compatibilidade com Vortex ainda será testada.</p>
+   <div className="mode-selector">{(['1v1','2v2','4v4'] as Mode[]).map(m=><button key={m} aria-pressed={mode===m} type="button" onClick={()=>changeMode(m)} style={{flex:1,padding:14,borderRadius:9,border:'1px solid #53617d',background:mode===m?'linear-gradient(120deg,#f78322,#c53716)':'#17131a',color:'white',fontWeight:700}}><b>{m.replace('v','×')}</b><span>{m==='1v1'?'Duelo':m==='2v2'?'Dupla':'Squad'}</span></button>)}</div>
+   <p style={{color:'#a8b4c8',fontSize:13}}>{count[mode]} jogador(es) por equipe · Cadastre os nicks como aparecem no jogo.</p>
    {preview?<div>
     <h2>Confirme os dados</h2>
     <p><b>Equipe:</b> {team}</p><p><b>Capitão:</b> {captain}</p><p><b>Modalidade:</b> {mode.replace('v','x')}</p>
@@ -82,7 +85,6 @@ export default function Home(){
     {notice&&<p role="alert">{notice}</p>}
     <button type="submit" style={{width:'100%',padding:14,background:'#ef662f',color:'white',fontWeight:700,border:0,borderRadius:8,marginTop:22}}>Revisar cadastro</button>
    </form>}
-  </section>
-  <p style={{color:'#9ba8bf',fontSize:12,marginTop:24}}>Ambiente de testes • Cadastro salvo neste navegador (evite dispositivos compartilhados) • Sem pagamentos • Sem criação de salas • Pareamento experimental disponível após cadastro</p>
- </main>;
+  </section><aside className="panel process-panel"><div className="panel-header"><div className="panel-icon"><ArenaIcon name="bolt"/></div><div><h2>Do cadastro à arena</h2><p>Seu próximo confronto começa aqui.</p></div></div><ol className="process-steps"><li><b>Monte a equipe</b><span>Escolha a modalidade e informe os nicks.</span></li><li><b>Revise e confirme</b><span>Confira os dados antes de entrar na fila.</span></li><li><b>Encontre seu adversário</b><span>Aguarde uma equipe da mesma modalidade.</span></li><li><b>Entre na disputa</b><span>Acesse a sala após a liberação do organizador.</span></li></ol><div className="panel-caption">JOGUE JUNTO. EVOLUA SEMPRE.</div><p className="help-text">Ambiente de testes, sem pagamentos. O cadastro fica vinculado a este navegador. Evite dispositivos compartilhados.</p></aside></div>
+ </ArenaShell>;
 }
