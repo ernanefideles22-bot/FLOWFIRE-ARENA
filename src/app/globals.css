@@ -13,3 +13,5 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .topbar-logo{width:44px;height:44px;object-fit:contain;mix-blend-mode:screen}
+/* Keep active controls legible while hovered or keyboard focused. */
+.arena-content button[aria-pressed=true]:hover:enabled,.arena-content button.primary-button:hover:enabled,.arena-content button[type=submit]:hover:enabled{background:linear-gradient(110deg,#ffc16c,#ff8734 55%,#ef5d20)!important;color:#1c0e07!important;box-shadow:0 6px 26px #ff701f30}
