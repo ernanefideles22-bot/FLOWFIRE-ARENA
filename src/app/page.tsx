@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {ArenaShell,ArenaHero,ArenaIcon} from '../components/arena-shell';
+import {ArenaShell,ArenaHero} from '../components/arena-shell';
 type Mode='1v1'|'2v2'|'4v4';
 const count:Record<Mode,number>={'1v1':1,'2v2':2,'4v4':4};
 const field:React.CSSProperties={display:'block',width:'100%',boxSizing:'border-box',padding:12,marginTop:8,background:'#0c1323',color:'white',border:'1px solid #3b4963',borderRadius:8};
@@ -16,7 +16,7 @@ export default function Home(){
  const [queueToken,setQueueToken]=useState('');
  const [queueStatus,setQueueStatus]=useState('');
  const [match,setMatch]=useState<{matchId:string;mode:string;teamA:{name:string;players:string[]};teamB:{name:string;players:string[]};roomCreated?:boolean;room?:{id:string;password:string|null;createdAt:string|null}|null}|null>(null);
- useEffect(()=>{try{const saved=window.localStorage.getItem('flowfire-arena-team-v1');if(!saved)return;const x=JSON.parse(saved);if(!['1v1','2v2','4v4'].includes(x.mode)||typeof x.teamId!=='string'||typeof x.queueToken!=='string')return;setMode(x.mode);setTeam(x.name||'');setCaptain(x.captain||'');setPlayers(Array.isArray(x.players)?x.players:Array(count[x.mode as Mode]).fill(''));setSavedId(x.teamId);setQueueToken(x.queueToken);setPreview(true);setNotice('Cadastro recuperado deste dispositivo.');}catch{window.localStorage.removeItem('flowfire-arena-team-v1');}},[]);
+ useEffect(()=>{try{const saved=window.localStorage.getItem('flowfire-arena-team-v1');if(!saved)return;const x=JSON.parse(saved);if(!['1v1','2v2','4v4'].includes(x.mode)||typeof x.teamId!=='string'||typeof x.queueToken!=='string')return;setMode(x.mode);setTeam(x.name||'');setCaptain(x.captain||'');setPlayers(Array.isArray(x.players)?x.players:Array(count[x.mode as Mode]).fill(''));setSavedId(x.teamId);setQueueToken(x.queueToken);setPreview(true);setNotice('');}catch{window.localStorage.removeItem('flowfire-arena-team-v1');}},[]);
  const clearSaved=()=>{window.localStorage.removeItem('flowfire-arena-team-v1');setSavedId('');setQueueToken('');setQueueStatus('');setMatch(null);setPreview(false);setTeam('');setCaptain('');setPlayers(Array(count[mode]).fill(''));setNotice('Cadastro local desvinculado deste navegador.');};
  const changeMode=(m:Mode)=>{setMode(m);setPlayers(Array(count[m]).fill(''));setPreview(false);setNotice('');setSavedId('');setQueueToken('');setQueueStatus('');setMatch(null)};
  const register=async()=>{
@@ -26,7 +26,7 @@ export default function Home(){
    const data=await response.json();
    if(!response.ok)throw new Error(data.error||'Falha ao cadastrar');
    setSavedId(data.teamId);setQueueToken(data.queueToken);setMatch(null);window.localStorage.setItem('flowfire-arena-team-v1',JSON.stringify({teamId:data.teamId,queueToken:data.queueToken,mode,name:team,captain,players}));
-   setNotice('Equipe cadastrada no banco de dados. Este dispositivo poderá recuperar o cadastro.');
+   setNotice('Cadastro concluído.');
   }catch(error){setNotice(error instanceof Error?error.message:'Falha no cadastro');}
   finally{setSaving(false);}
  };
@@ -59,32 +59,28 @@ export default function Home(){
  };
 
  return <ArenaShell>
- <div className="breadcrumb">Play <span>/ Arena de partidas</span></div>
- <div className="page-kicker"><h2>Arena de partidas</h2><span>SEU TIME. SEU LEGADO.</span></div>
  <ArenaHero/>
- <div className="mode-strip">{[{mode:'1×1',name:'Duelo',desc:'Precisão individual'},{mode:'2×2',name:'Dupla',desc:'Conexão e estratégia'},{mode:'4×4',name:'Squad',desc:'Força em equipe'}].map(x=><div className="mode-tile" key={x.mode}><strong>{x.mode}</strong><div><b>{x.name}</b><small>{x.desc}</small></div><ArenaIcon name="sword"/></div>)}</div>
- <div className="section-heading" id="inscricao"><h2>Prepare sua equipe</h2><span>CONTRA SQUAD</span></div>
- <div className="registration-grid"><section className="panel registration-panel">
-   <h2 style={{fontSize:20}}>Escolha a modalidade</h2>
+ <div className="section-heading" id="inscricao"><h2>{savedId?'Minha equipe':'Cadastrar equipe'}</h2></div>
+ <div className="registration-grid" style={{display:"block",maxWidth:720,margin:"0 auto"}}><section className="panel registration-panel">
+   <h2 style={{fontSize:20}}>Modalidade</h2>
    <div className="mode-selector">{(['1v1','2v2','4v4'] as Mode[]).map(m=><button key={m} aria-pressed={mode===m} type="button" onClick={()=>changeMode(m)} style={{flex:1,padding:14,borderRadius:9,border:'1px solid #53617d',background:mode===m?'linear-gradient(120deg,#f78322,#c53716)':'#17131a',color:'white',fontWeight:700}}><b>{m.replace('v','×')}</b><span>{m==='1v1'?'Duelo':m==='2v2'?'Dupla':'Squad'}</span></button>)}</div>
-   <p style={{color:'#a8b4c8',fontSize:13}}>{count[mode]} jogador(es) por equipe · Cadastre os nicks como aparecem no jogo.</p>
    {preview?<div>
     <h2>Confirme os dados</h2>
-    <p><b>Equipe:</b> {team}</p><p><b>Capitão:</b> {captain}</p><p><b>Modalidade:</b> {mode.replace('v','x')}</p>
+    <p><b>Equipe:</b> {team}</p><p><b>Capitão:</b> {captain}</p>
     <ol>{players.map((p,i)=><li key={i}>{p}</li>)}</ol>
     {!savedId&&<p style={{color:'#ffe4b8'}}>Confira cada nick com o Free Fire antes de confirmar. A identificação automática depende desses dados.</p>}
-    {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada. Protocolo: {savedId}</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila / Consultar confronto'}</button><button type="button" disabled={saving} onClick={cancelQueue} style={{marginTop:12,marginLeft:8,padding:12,borderRadius:8}}>Sair da fila</button><button type="button" disabled={saving} onClick={checkMatch} style={{marginTop:12,padding:12,borderRadius:8}}>Atualizar detalhes do confronto</button>{queueStatus&&<p role="status">{queueStatus}</p>}{match&&<section className="player-match-card" style={{marginTop:20,padding:18,border:'1px solid #455574',borderRadius:12}}><h2>Confronto {match.mode.replace('v','x')}</h2><p>Partida: {match.matchId}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{[match.teamA,match.teamB].map((t,i)=><div className="player-team-card" key={i} style={{background:'#0c1323',padding:12,borderRadius:10}}><b>{t.name}</b><ol style={{paddingLeft:22}}>{t.players.map((p,j)=><li key={j}>{p}</li>)}</ol></div>)}</div>{match.roomCreated&&match.room?<div className="room-credentials" style={{marginTop:12,padding:12,background:'#103b2a',borderRadius:8}}><strong>Sala Vortex disponível</strong><p>ID: {match.room.id}</p><p>Senha: {match.room.password||'Consulte o organizador'}</p><p style={{fontSize:12}}>Use as credenciais somente com os jogadores deste confronto.</p></div>:<p style={{color:'#ffbc88'}}>Sala Vortex ainda não criada. Aguardando liberação do organizador.</p>}</section>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
+    {savedId?<div><p style={{color:'#8ee0a2'}}>Equipe cadastrada</p><button type="button" disabled={saving} onClick={joinQueue} style={{padding:14,background:'#ef662f',color:'white',border:0,borderRadius:8}}>{saving?'Processando...':'Entrar na fila'}</button><button type="button" disabled={saving} onClick={cancelQueue} style={{marginTop:12,marginLeft:8,padding:12,borderRadius:8}}>Sair da fila</button><button type="button" disabled={saving} onClick={checkMatch} style={{marginTop:12,padding:12,borderRadius:8}}>Atualizar detalhes do confronto</button>{queueStatus&&<p role="status">{queueStatus}</p>}{match&&<section className="player-match-card" style={{marginTop:20,padding:18,border:'1px solid #455574',borderRadius:12}}><h2>Confronto {match.mode.replace('v','x')}</h2><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>{[match.teamA,match.teamB].map((t,i)=><div className="player-team-card" key={i} style={{background:'#0c1323',padding:12,borderRadius:10}}><b>{t.name}</b><ol style={{paddingLeft:22}}>{t.players.map((p,j)=><li key={j}>{p}</li>)}</ol></div>)}</div>{match.roomCreated&&match.room?<div className="room-credentials" style={{marginTop:12,padding:12,background:'#103b2a',borderRadius:8}}><strong>Sala Vortex disponível</strong><p>ID: {match.room.id}</p><p>Senha: {match.room.password||'Consulte o organizador'}</p></div>:<p style={{color:'#ffbc88'}}>Sala Vortex ainda não criada. Aguardando liberação do organizador.</p>}</section>}</div>:<button type="button" disabled={saving} onClick={register} style={{padding:14,background:'#ef662f',border:0,borderRadius:8,color:'white'}}>{saving?'Salvando...':'Confirmar cadastro'}</button>}
     {notice&&<p role="status">{notice}</p>}
-    <button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Voltar</button>{savedId&&<button type="button" onClick={clearSaved} style={{display:'block',marginTop:16}}>Desvincular cadastro deste dispositivo</button>}
+    {!savedId&&<button type="button" onClick={()=>setPreview(false)} style={{marginLeft:12}}>Corrigir dados</button>}{savedId&&<button type="button" onClick={clearSaved} style={{display:'block',marginTop:16}}>Trocar de equipe</button>}
    </div>:<form onSubmit={e=>{e.preventDefault();if(new Set(players.map(p=>p.trim().toLowerCase())).size!==players.length){setNotice('Não repita jogadores');return;}setNotice('');setPreview(true);}}>
     <label style={{display:'block',marginTop:16}}>Nome da equipe<input required maxLength={64} value={team} onChange={e=>setTeam(e.target.value)} style={field}/></label>
     <label style={{display:'block',marginTop:16}}>Nick do capitão<input required maxLength={64} value={captain} onChange={e=>setCaptain(e.target.value)} style={field}/></label>
     <h3>Jogadores</h3>
-    <p role="note" style={{padding:14,background:'#3a2818',border:'1px solid #ef9b4a',borderRadius:10,color:'#ffe4b8',fontWeight:700}}>⚠️ ATENÇÃO: Digite o nick de cada jogador exatamente como aparece no Free Fire, incluindo letras maiúsculas, números, espaços e símbolos. Não use apelidos ou nomes aproximados. Um nick diferente pode impedir a identificação automática do resultado.</p>
+    <p role="note" style={{padding:14,background:'#3a2818',border:'1px solid #ef9b4a',borderRadius:10,color:'#ffe4b8',fontWeight:700}}>⚠️ Digite cada nick exatamente como aparece no Free Fire, incluindo símbolos e espaços.</p>
     {players.map((p,i)=><label key={i} style={{display:'block',marginTop:12}}>Nick {i+1}<input required maxLength={64} value={p} onChange={e=>setPlayers(a=>a.map((x,j)=>j===i?e.target.value:x))} style={field}/></label>)}
     {notice&&<p role="alert">{notice}</p>}
     <button type="submit" style={{width:'100%',padding:14,background:'#ef662f',color:'white',fontWeight:700,border:0,borderRadius:8,marginTop:22}}>Revisar cadastro</button>
    </form>}
-  </section><aside className="panel process-panel"><div className="panel-header"><div className="panel-icon"><ArenaIcon name="bolt"/></div><div><h2>Do cadastro à arena</h2><p>Seu próximo confronto começa aqui.</p></div></div><ol className="process-steps"><li><b>Monte a equipe</b><span>Escolha a modalidade e informe os nicks.</span></li><li><b>Revise e confirme</b><span>Confira os dados antes de entrar na fila.</span></li><li><b>Encontre seu adversário</b><span>Aguarde uma equipe da mesma modalidade.</span></li><li><b>Entre na disputa</b><span>Acesse a sala após a liberação do organizador.</span></li></ol><div className="panel-caption">JOGUE JUNTO. EVOLUA SEMPRE.</div><p className="help-text">Ambiente de testes, sem pagamentos. O cadastro fica vinculado a este navegador. Evite dispositivos compartilhados.</p></aside></div>
+  </section></div>
  </ArenaShell>;
 }
