@@ -21,7 +21,7 @@ export function ArenaShell({children,admin=false}:{children:ReactNode;admin?:boo
    <div className="nav-label">EXPERIÊNCIA ARENA</div>
    <nav aria-label="Navegação principal">
     <Link href="/" className={!admin?'nav-item is-active':'nav-item'} aria-current={!admin?'page':undefined}><ArenaIcon name="sword"/> Arena de partidas <span>01</span></Link>
-    <Link href="/admin" className={admin?'nav-item is-active':'nav-item'} aria-current={admin?'page':undefined}><ArenaIcon/> Central de operações <span>02</span></Link>
+    {admin&&<Link href="/admin" className="nav-item is-active" aria-current="page"><ArenaIcon/> Central de operações <span>02</span></Link>}
     <Link href="/confrontos" className="nav-item"><ArenaIcon name="users"/> Sala de espera <ArenaIcon name="arrow"/></Link>
    </nav>
    <div className="sidebar-note"><ArenaIcon name="shield"/><strong>Espírito competitivo.<br/>Identidade Flowfire.</strong><p>Uma arena para quem entra em campo para evoluir.</p><div className="tiny-rule"/><span>CONTRA SQUAD · FREE FIRE</span></div>
