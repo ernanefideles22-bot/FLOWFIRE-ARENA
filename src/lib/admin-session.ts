@@ -1,5 +1,5 @@
 const encoder=new TextEncoder();
 function bytesToHex(bytes:Uint8Array){return Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');}
-async function sign(payload:string,secret:string){const key=await crypto.subtle.importKey('raw',encoder.encode(secret),'HMAC',false,['sign']);return bytesToHex(new Uint8Array(await crypto.subtle.sign('HMAC',key,encoder.encode(payload))));}
+async function sign(payload:string,secret:string){const key=await crypto.subtle.importKey('raw',encoder.encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);return bytesToHex(new Uint8Array(await crypto.subtle.sign('HMAC',key,encoder.encode(payload))));}
 export async function createAdminSession(secret:string){const expiry=Date.now()+12*60*60*1000;const payload='admin.'+expiry;return payload+'.'+await sign(payload,secret);}
 export async function validAdminSession(token:string|undefined,secret:string){if(!token||!secret)return false;const parts=token.split('.');if(parts.length!==3||parts[0]!=='admin'||!/^\d{13}$/.test(parts[1]))return false;const expiry=Number(parts[1]);if(expiry<Date.now()||expiry>Date.now()+12*60*60*1000)return false;const payload=parts[0]+'.'+parts[1];const expected=await sign(payload,secret);return parts[2].length===expected.length&&parts[2]===expected;}
